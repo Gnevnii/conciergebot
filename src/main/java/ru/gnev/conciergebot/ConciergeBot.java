@@ -3,7 +3,10 @@ package ru.gnev.conciergebot;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.objects.Chat;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 import ru.gnev.conciergebot.command.CommandContainer;
 import ru.gnev.conciergebot.command.CommandName;
 import ru.gnev.conciergebot.service.SendMessageServiceImpl;
@@ -24,13 +27,17 @@ public class ConciergeBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(final Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String message = update.getMessage().getText().trim();
-            if (message.startsWith(COMMAND_PREFIX)) {
-                String commandIdentifier = message.split(" ")[0].toLowerCase();
-                commandContainer.retrieveCommand(commandIdentifier).execute(update);
-            } else {
-                commandContainer.retrieveCommand(CommandName.NO.getCommandName()).execute(update);
+        if (update.hasMessage()) {
+            Message message = update.getMessage();
+
+            if (update.getMessage().hasText()) {
+                String messageText = update.getMessage().getText().trim();
+                if (messageText.startsWith(COMMAND_PREFIX)) {
+                    String commandIdentifier = messageText.split(" ")[0].toLowerCase();
+                    commandContainer.retrieveCommand(commandIdentifier).execute(update);
+                } else {
+                    commandContainer.retrieveCommand(CommandName.NO.getCommandName()).execute(update);
+                }
             }
         }
     }
