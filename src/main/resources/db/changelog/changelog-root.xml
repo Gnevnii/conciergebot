@@ -8,7 +8,7 @@
       http://www.liquibase.org/xml/ns/pro
       http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd">
 
+    <include file="db/changelog/changesets/00000_get_uuid_extension.sql"/>
     <include file="db/changelog/changesets/00001_create_table.sql"/>
     <include file="db/changelog/changesets/00002_create_table.sql"/>
-    <include file="db/changelog/changesets/00003_add_column.sql"/>
 </databaseChangeLog>
