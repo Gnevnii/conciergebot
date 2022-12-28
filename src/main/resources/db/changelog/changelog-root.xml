@@ -9,10 +9,10 @@
       http://www.liquibase.org/xml/ns/pro
       http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd">
 
-    <include file="db/changelog/bot-0001/create_building_table.sql"/>
-    <include file="db/changelog/bot-0001/create_users_table.sql"/>
-    <include file="db/changelog/bot-0001/create_request_question_table.sql"/>
-    <include file="db/changelog/bot-0001/create_error_table.sql"/>
-    <include file="db/changelog/bot-0001/create_registration_answers_table.sql"/>
+    <include file="/db/changelog/CB_0001/create_building_table.sql"/>
+    <include file="/db/changelog/CB_0001/create_users_table.sql"/>
+    <include file="/db/changelog/CB_0001/create_request_question_table.sql"/>
+    <include file="/db/changelog/CB_0001/create_error_table.sql"/>
+    <include file="/db/changelog/CB_0001/create_registration_answers_table.sql"/>
 
 </databaseChangeLog>
