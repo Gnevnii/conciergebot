@@ -12,6 +12,8 @@ public interface UserRegistrationAnswerRepository extends CrudRepository<UserReg
 
     int countByTgUserId(final User tgUserId);
 
+    List<UserRegistrationAnswer> getByTgUserId(final User user);
+
     List<UserRegistrationAnswer> findAllByTgUserId(final User tgUserId);
 
     void deleteUserRegistrationAnswersByTgUserId(final User tgUserId);

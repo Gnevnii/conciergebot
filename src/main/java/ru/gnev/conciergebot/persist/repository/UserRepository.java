@@ -32,6 +32,8 @@ public interface UserRepository extends CrudRepository<User, String> {
 
     List<User> getUsersByFloorNumber(int floor);
 
+    List<User> getUsersByFlatNumber(int flat);
+
     List<User> getUsersBySectionNumber(int section);
 
     List<User> getUsersByFloorNumberAndSectionNumber(int floor, int section);

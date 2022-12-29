@@ -13,7 +13,17 @@ public interface IRegistrationService {
 
     String processRegistration(long tgUserId, Message message);
 
-    boolean isUserPartitionRegistered(long tgUserId, long tgChatId);
+    /**
+     * Ищет конфиг клавиатуры для следующего вопроса регистрации у бота, на который пользователь еще не отвечал
+     */
+    QuestionKeyboardConfig getNextRegistrationQuestionConfig(long tgUserId);
+
+    /**
+     * Ищет следующий по порядку вопрос регистрации у бота, на который пользователь еще не отвечал
+     */
+    RegistrationQuestion getNextRegistrationQuestion(User user);
+
+    boolean isKnownUser(long tgUserId, long tgChatId);
 
     String hasUnacceptableAnswers(long tgUserId);
 
@@ -28,4 +38,6 @@ public interface IRegistrationService {
                            Long chatId);
 
     boolean isBotRegistered(Long chatId);
+
+    boolean isFromAddress(Long tgUserId);
 }

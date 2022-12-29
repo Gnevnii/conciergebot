@@ -3,19 +3,19 @@ package ru.gnev.conciergebot.bean.entity;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * Координаты квартиры в рамках дома
+ * Тип вопроса регистрации у бота
  */
-public enum FlatCoordinate {
-    ENTRANCE("entrance", "подъезд"),
+public enum RegQuestionType {
+    NAME("name", "имя"),
     ADDRESS("address", "адрес"),
     FLOOR("floor", "этаж"),
     SECTION("section", "план"),
-    FLAT("flat", "кв");
+    FLAT("flat", "квартира");
 
-    private final String value;
-    private final String meaning;
+    private String value;
+    private String meaning;
 
-    FlatCoordinate(String value, String meaning) {
+    RegQuestionType(String value, String meaning) {
         this.value = value;
         this.meaning = meaning;
     }
@@ -28,9 +28,9 @@ public enum FlatCoordinate {
         return meaning;
     }
 
-    public static FlatCoordinate findByMeaning(String meaning) {
+    public static RegQuestionType findByMeaning(String meaning) {
         if (StringUtils.isBlank(meaning)) return null;
-        for (FlatCoordinate fc : FlatCoordinate.values()) {
+        for (RegQuestionType fc : RegQuestionType.values()) {
             if (fc.meaning.equals(meaning)) return fc;
         }
         return null;

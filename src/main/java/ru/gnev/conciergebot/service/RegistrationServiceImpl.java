@@ -10,13 +10,14 @@ import ru.gnev.conciergebot.bean.Command;
 import ru.gnev.conciergebot.bean.QuestionKeyboardConfig;
 import ru.gnev.conciergebot.bean.entity.Building;
 import ru.gnev.conciergebot.bean.entity.User;
-import ru.gnev.conciergebot.bean.entity.registration.AnswerType;
+import ru.gnev.conciergebot.bean.entity.registration.RegistrationAnswerTemplate;
 import ru.gnev.conciergebot.bean.entity.registration.RegistrationQuestion;
 import ru.gnev.conciergebot.bean.entity.registration.UserRegistrationAnswer;
 import ru.gnev.conciergebot.persist.repository.BuildingRepositoryImpl;
 import ru.gnev.conciergebot.persist.repository.RegistrationQuestionRepository;
 import ru.gnev.conciergebot.persist.repository.UserRegistrationAnswerRepository;
 import ru.gnev.conciergebot.persist.repository.UserRepository;
+import ru.gnev.conciergebot.utils.CallbackQueryDataHelper;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -115,7 +116,34 @@ public class RegistrationServiceImpl implements IRegistrationService {
     }
 
     @Override
-    public boolean isUserPartitionRegistered(final long tgUserId, final long tgChatId) {
+    public QuestionKeyboardConfig getNextRegistrationQuestionConfig(long tgUserId) {
+        if (isUserRegistered(tgUserId)) {
+            return null;
+        }
+
+        final User user = userRepository.getUserByTgUserId(tgUserId);
+        final RegistrationQuestion question = getNextRegistrationQuestion(user);
+        if (question == null) return null;
+
+        final QuestionKeyboardConfig config = new QuestionKeyboardConfig(question.getQuestionText());
+        final List<RegistrationAnswerTemplate> answers = regAnswerRep.findAllByQuestion(question);
+        if (!answers.isEmpty()) {
+            config.setButtonConfigs(answers
+                    .stream()
+                    .map(answer -> new AnswerButtonConfig(answer.getLabel(), callbackQueryDataHelper.createCallbackQueryData(tgUserId, question.getId(), answer.getLabel())))
+                    .toList());
+        }
+        return config;
+    }
+
+    @Override
+    public RegistrationQuestion getNextRegistrationQuestion(final User user) {
+        final int questionAnsweredCount = userRegistrationAnswerRep.countByTgUserId(user);
+        return questionRep.getRegistrationQuestionByQuestionOrder(questionAnsweredCount + 1);
+    }
+
+    @Override
+    public boolean isKnownUser(final long tgUserId, final long tgChatId) {
         final User user = userRepository.getUserByTgUserId(tgUserId);
         return user != null;
     }
@@ -158,12 +186,15 @@ public class RegistrationServiceImpl implements IRegistrationService {
         };
     }
 
-    private boolean validAnswerTypeForQuestion(final String text, final String answerType) {
-        final AnswerType type = AnswerType.findByValue(answerType);
-        assert type != null;
-        return switch (type) {
-            case BOOLEAN -> text.trim().equalsIgnoreCase("да") || text.trim().equalsIgnoreCase("нет");
-            case INTEGER -> NumberUtils.isCreatable(text);
+    private boolean validAnswerTypeForQuestion(final String text, final UserRegistrationAnswer answer) {
+        final Command p = Command.findByValue(answer.getQuestion().getQuestionMeaning());
+        if (p == null) return false;
+
+        return switch (p) {
+            case FLOOR -> NumberUtils.isCreatable(text);
+            case SECTION -> NumberUtils.isCreatable(text);
+            case ADDRESS -> text.trim().equalsIgnoreCase("да") || text.trim().equalsIgnoreCase("нет");
+            default -> false;
         };
     }
 
@@ -200,5 +231,17 @@ public class RegistrationServiceImpl implements IRegistrationService {
     @Override
     public boolean isBotRegistered(final Long chatId) {
         return buildingRepository.existsByTgGroupChatId(chatId);
+    }
+
+    @Override
+    public boolean isFromAddress(final Long tgUserId) {
+        final List<UserRegistrationAnswer> answers = userRegistrationAnswerRep.getByTgUserId(userRepository.getUserByTgUserId(tgUserId));
+        if (answers.isEmpty()) return true; //еще нет данных, но потенциально может быть - да
+
+        final Optional<UserRegistrationAnswer> optional = answers
+                .stream()
+                .filter(a -> a.getQuestion().getQuestionOrder() == 1)
+                .findFirst();
+        return optional.map(answer -> answer.getAnswer().equalsIgnoreCase("да")).orElse(false);
     }
 }
