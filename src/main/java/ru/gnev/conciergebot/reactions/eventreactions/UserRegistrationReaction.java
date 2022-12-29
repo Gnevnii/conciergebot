@@ -42,7 +42,7 @@ public class UserRegistrationReaction extends AbstractPrivateChatReaction {
     @Override
     public void react(final Update update, final BiConsumer<Long, Object> sender, final String commandLine) {
         final Message message = update.getMessage();
-        final boolean userPartitionRegistered = registrationService.isUserPartitionRegistered(message.getFrom().getId(), message.getChatId());
+        final boolean userPartitionRegistered = registrationService.isKnownUser(message.getFrom().getId(), message.getChatId());
         if (!userPartitionRegistered) {
             sender.accept(message.getChatId(), new SendMessage(String.valueOf(message.getChatId()), "Не видел Вас в чате дома. Вы там что-нибудь когда-нибудь писали? Напишите Ы"));
             return;

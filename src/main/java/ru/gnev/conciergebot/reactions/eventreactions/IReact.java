@@ -1,7 +1,5 @@
 package ru.gnev.conciergebot.reactions.eventreactions;
 
-import org.apache.commons.lang3.StringUtils;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import ru.gnev.conciergebot.bean.Command;
 import ru.gnev.conciergebot.bean.entity.FlatCoordinate;

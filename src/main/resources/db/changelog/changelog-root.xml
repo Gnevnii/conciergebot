@@ -14,5 +14,5 @@
     <include file="/db/changelog/CB_0001/create_request_question_table.sql"/>
     <include file="/db/changelog/CB_0001/create_error_table.sql"/>
     <include file="/db/changelog/CB_0001/create_registration_answers_table.sql"/>
-
+    <include file="/db/changelog/CB_0001/create_registration_answer_table.sql"/>
 </databaseChangeLog>

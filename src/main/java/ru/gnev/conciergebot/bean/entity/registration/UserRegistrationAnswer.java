@@ -17,7 +17,7 @@ import javax.persistence.Table;
 @Getter
 @Setter
 @Entity
-@Table(name = "cb_registration_answer", schema = "concierge_db")
+@Table(name = "cb_registration_user_answer", schema = "concierge_db")
 public class UserRegistrationAnswer {
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
@@ -33,6 +33,7 @@ public class UserRegistrationAnswer {
     @ManyToOne
     @JoinColumn(name = "l_question_id")
     private RegistrationQuestion question;
+
     @Column(name = "s_answer")
     private String answer;
 }

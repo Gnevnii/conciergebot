@@ -20,8 +20,8 @@ import ru.gnev.conciergebot.reactions.ReactionRegistry;
 import ru.gnev.conciergebot.reactions.eventreactions.BotAddedToChatReaction;
 import ru.gnev.conciergebot.reactions.eventreactions.IReact;
 import ru.gnev.conciergebot.reactions.eventreactions.UpdateUserInfoReaction;
-import ru.gnev.conciergebot.reactions.eventreactions.UserRegistrationReaction;
 import ru.gnev.conciergebot.reactions.eventreactions.UserRemovedFromChatReaction;
+import ru.gnev.conciergebot.reactions.eventreactions.withanswerkeyboard.UserRegistrationWKeyboardReaction;
 import ru.gnev.conciergebot.utils.CommandAndCommandLine;
 import ru.gnev.conciergebot.utils.ICommandResolver;
 
@@ -91,7 +91,7 @@ public class ConciergeBot extends TimedSendLongPollingBot {
             }
 
             //регистрация пользователя
-            optional = reactionRegistry.getReaction(UserRegistrationReaction.class);
+            optional = reactionRegistry.getReaction(UserRegistrationWKeyboardReaction.class);
             if (optional.isPresent()) {
                 final IReact iReact = optional.get();
                 if (iReact.matchPolicy(update) && iReact.isValid(update)) {

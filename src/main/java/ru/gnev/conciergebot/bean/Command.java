@@ -8,6 +8,7 @@ import java.util.List;
 public enum Command {
     SECTION("план"),
     FLOOR("этаж"),
+    FLAT("кв"),
     SECTIONFLOORMIX("афывафы"),
     ADDRESS("адрес"),
     INDEX("индекс"),

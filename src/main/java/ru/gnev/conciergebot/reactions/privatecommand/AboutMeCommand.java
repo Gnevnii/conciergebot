@@ -11,6 +11,7 @@ import ru.gnev.conciergebot.bean.entity.User;
 import ru.gnev.conciergebot.persist.repository.UserRepository;
 import ru.gnev.conciergebot.reactions.eventreactions.AbstractPrivateChatReaction;
 
+import java.util.List;
 import java.util.function.BiConsumer;
 
 @Component
@@ -33,10 +34,27 @@ public class AboutMeCommand extends AbstractPrivateChatReaction {
         final Message message = update.getMessage();
         final long userId = message.getFrom().getId();
         final User user = userRepository.getUserByTgUserId(userId);
-        sender.accept(message.getChatId(), new SendMessage(String.valueOf(message.getChatId()), """
-                Ваш этаж - %s,
-                Ваш план - %s
-                """.formatted(user.getFloorNumber(), user.getSectionNumber())));
+        final List<String> userNames = userRepository.getUsersByFlatNumber(user.getFlatNumber())
+                .stream()
+                .filter(n -> !n.getTgUserName().equals(user.getTgUserName()))
+                .map(u -> "@" + u.getTgUserName())
+                .toList();
+
+        String third = "";
+        if (!userNames.isEmpty()) {
+            third = "3. Помимо Вас в квартире зарегистрированы - " + String.join(", ", userNames);
+        }
+
+        String formatted = """
+                Итак. Вот всё, что мне известно про Вас:
+                1. Живете Вы в квартире №%s (это %sй этаж, план №%s);
+                2. При регистрации Вы указали, что Вас зовут %s
+                """.formatted(user.getFlatNumber(), user.getFloorNumber(), user.getSectionNumber(), user.getName());
+
+        if (!third.isBlank())
+            formatted += formatted + third;
+
+        sender.accept(message.getChatId(), new SendMessage(String.valueOf(message.getChatId()), formatted));
     }
 
     @Override

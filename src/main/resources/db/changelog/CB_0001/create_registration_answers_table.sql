@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset gnev:5
-create table concierge_db.cb_registration_answer
+create table concierge_db.cb_registration_user_answer
 (
     l_id          bigserial,
     s_answer      varchar(255),

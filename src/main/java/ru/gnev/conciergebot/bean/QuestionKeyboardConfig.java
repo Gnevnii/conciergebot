@@ -3,6 +3,7 @@ package ru.gnev.conciergebot.bean;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -12,10 +13,9 @@ import java.util.List;
 @Setter
 public class QuestionKeyboardConfig {
     private String question;
-    private List<AnswerButtonConfig> buttonConfigs;
+    private List<AnswerButtonConfig> buttonConfigs = new ArrayList<>();
 
-    public QuestionKeyboardConfig(final String question, final List<AnswerButtonConfig> buttonConfigs) {
+    public QuestionKeyboardConfig(final String question) {
         this.question = question;
-        this.buttonConfigs = buttonConfigs;
     }
 }

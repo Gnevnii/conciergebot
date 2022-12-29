@@ -9,28 +9,27 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
-import java.util.Date;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "cb_reg_question", schema = "concierge_db")
-public class RegistrationQuestion {
+@Table(name = "cb_reg_answer_template", schema = "concierge_db")
+public class RegistrationAnswerTemplate {
     @Setter(AccessLevel.NONE)
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "l_id", nullable = false)
     private Long id;
-
-    @Column(name = "s_question_text")
-    private String questionText;
-    @Column(name = "s_question_meaning")
-    private String questionMeaning;
-    @Column(name = "i_question_order")
-    private int questionOrder;
-    @Column(name = "b_mandatory_question")
-    private boolean isMandatory;
-    @Column(name = "dt_effective_since")
-    private Date effectiveSince;
+    @Column(name = "s_label")
+    private String label;
+    @Column(name = "s_type")
+    private String type;
+    @Column(name = "i_order")
+    private int order;
+    @ManyToOne
+    @JoinColumn(name = "l_req_question_id")
+    private RegistrationQuestion question;
 }

@@ -5,21 +5,22 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import ru.gnev.conciergebot.bean.AnswerButtonConfig;
 import ru.gnev.conciergebot.bean.Command;
 import ru.gnev.conciergebot.bean.QuestionKeyboardConfig;
 import ru.gnev.conciergebot.bean.entity.Building;
 import ru.gnev.conciergebot.bean.entity.User;
-import ru.gnev.conciergebot.bean.entity.registration.AnswerType;
+import ru.gnev.conciergebot.bean.entity.registration.RegistrationAnswerTemplate;
 import ru.gnev.conciergebot.bean.entity.registration.RegistrationQuestion;
 import ru.gnev.conciergebot.bean.entity.registration.UserRegistrationAnswer;
 import ru.gnev.conciergebot.persist.repository.BuildingRepositoryImpl;
-import ru.gnev.conciergebot.persist.repository.RegistrationQuestionRepository;
+import ru.gnev.conciergebot.persist.repository.RegAnswerRepository;
+import ru.gnev.conciergebot.persist.repository.RegQuestionRepository;
 import ru.gnev.conciergebot.persist.repository.UserRegistrationAnswerRepository;
 import ru.gnev.conciergebot.persist.repository.UserRepository;
+import ru.gnev.conciergebot.utils.CallbackQueryDataHelper;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -27,22 +28,27 @@ import java.util.Optional;
 @Service
 public class RegistrationServiceImpl implements IRegistrationService {
 
-    private final RegistrationQuestionRepository questionRepository;
-    private final UserRegistrationAnswerRepository answerRepository;
+    private final RegQuestionRepository questionRep;
+    private final UserRegistrationAnswerRepository userRegistrationAnswerRep;
     private final UserRepository userRepository;
     private final BuildingRepositoryImpl buildingRepository;
+    private final RegAnswerRepository regAnswerRep;
+    private final CallbackQueryDataHelper callbackQueryDataHelper;
 
     @Inject
-    public RegistrationServiceImpl(RegistrationQuestionRepository questionRepository,
-                                   UserRegistrationAnswerRepository answerRepository,
-                                   UserRepository userRepository,
-                                   final BuildingRepositoryImpl buildingRepository) {
-        this.questionRepository = questionRepository;
-        this.answerRepository = answerRepository;
+    public RegistrationServiceImpl(final RegQuestionRepository questionRepository,
+                                   final UserRegistrationAnswerRepository answerRepository,
+                                   final UserRepository userRepository,
+                                   final BuildingRepositoryImpl buildingRepository,
+                                   final RegAnswerRepository regAnswerRepository,
+                                   final CallbackQueryDataHelper callbackQueryDataHelper) {
+        this.questionRep = questionRepository;
+        this.userRegistrationAnswerRep = answerRepository;
         this.userRepository = userRepository;
         this.buildingRepository = buildingRepository;
+        this.regAnswerRep = regAnswerRepository;
+        this.callbackQueryDataHelper = callbackQueryDataHelper;
     }
-
 
     /**
      * Последовательная обработка регистрации пользователя у бота.
@@ -65,14 +71,14 @@ public class RegistrationServiceImpl implements IRegistrationService {
         }
 
         final User user = userRepository.getUserByTgUserId(tgUserId);
-        final int userQuestionAnswers = answerRepository.countByTgUserId(user);
+        final int userQuestionAnswers = userRegistrationAnswerRep.countByTgUserId(user);
         if (userQuestionAnswers == 0) {
             //если не было ответов ни на один вопрос, то message обрабатывать не нужно, сразу запускаем вопрос;
-            final RegistrationQuestion question = questionRepository.getRegistrationQuestionByQuestionOrder(1);
+            final RegistrationQuestion question = questionRep.getRegistrationQuestionByQuestionOrder(1);
             final UserRegistrationAnswer answer = new UserRegistrationAnswer();
             answer.setTgUserId(userRepository.getUserByTgUserId(tgUserId));
             answer.setQuestion(question);
-            answerRepository.save(answer);
+            userRegistrationAnswerRep.save(answer);
 
             return question.getQuestionText();
         }
@@ -82,9 +88,13 @@ public class RegistrationServiceImpl implements IRegistrationService {
             return s;
         }
 
-        final List<UserRegistrationAnswer> answers = answerRepository.findAllByTgUserId(user);
-        UserRegistrationAnswer unfinished = answers.stream().filter(a -> a.getAnswer() == null || StringUtils.isBlank(a.getAnswer())).findFirst().get();
-        if (!validAnswerTypeForQuestion(message.getText(), unfinished.getQuestion().getAnswerType())) {
+        final List<UserRegistrationAnswer> answers = userRegistrationAnswerRep.findAllByTgUserId(user);
+        UserRegistrationAnswer unfinished = answers
+                .stream()
+                .filter(a -> a.getAnswer() == null || StringUtils.isBlank(a.getAnswer()))
+                .findFirst()
+                .get();
+        if (!validAnswerTypeForQuestion(message.getText(), unfinished)) {
             return "Неверный формат ответа. " + unfinished.getQuestion().getQuestionText();
         }
 
@@ -93,7 +103,7 @@ public class RegistrationServiceImpl implements IRegistrationService {
         }
 
         unfinished.setAnswer(message.getText().trim().toLowerCase());
-        answerRepository.save(unfinished);
+        userRegistrationAnswerRep.save(unfinished);
         syncToUser(tgUserId, unfinished);
 
         s = hasUnacceptableAnswers(tgUserId);
@@ -101,28 +111,55 @@ public class RegistrationServiceImpl implements IRegistrationService {
             return s;
         }
 
-        final int questionTotalCount = (int) questionRepository.count();
+        final int questionTotalCount = (int) questionRep.count();
         if (userQuestionAnswers == questionTotalCount) {
             return "Вы ответили на все обязательные вопросы. У вас есть доступ к командам бота.";
         }
 
-        final RegistrationQuestion question = questionRepository.getRegistrationQuestionByQuestionOrder(userQuestionAnswers + 1);
+        final RegistrationQuestion question = questionRep.getRegistrationQuestionByQuestionOrder(userQuestionAnswers + 1);
         final UserRegistrationAnswer answer = new UserRegistrationAnswer();
         answer.setTgUserId(userRepository.getUserByTgUserId(tgUserId));
         answer.setQuestion(question);
-        answerRepository.save(answer);
+        userRegistrationAnswerRep.save(answer);
         return question.getQuestionText();
     }
 
     @Override
-    public boolean isUserPartitionRegistered(final long tgUserId, final long tgChatId) {
+    public QuestionKeyboardConfig getNextRegistrationQuestionConfig(long tgUserId) {
+        if (isUserRegistered(tgUserId)) {
+            return null;
+        }
+
+        final User user = userRepository.getUserByTgUserId(tgUserId);
+        final RegistrationQuestion question = getNextRegistrationQuestion(user);
+        if (question == null) return null;
+
+        final QuestionKeyboardConfig config = new QuestionKeyboardConfig(question.getQuestionText());
+        final List<RegistrationAnswerTemplate> answers = regAnswerRep.findAllByQuestion(question);
+        if (!answers.isEmpty()) {
+            config.setButtonConfigs(answers
+                    .stream()
+                    .map(answer -> new AnswerButtonConfig(answer.getLabel(), callbackQueryDataHelper.createCallbackQueryData(tgUserId, question.getId(), answer.getLabel())))
+                    .toList());
+        }
+        return config;
+    }
+
+    @Override
+    public RegistrationQuestion getNextRegistrationQuestion(final User user) {
+        final int questionAnsweredCount = userRegistrationAnswerRep.countByTgUserId(user);
+        return questionRep.getRegistrationQuestionByQuestionOrder(questionAnsweredCount + 1);
+    }
+
+    @Override
+    public boolean isKnownUser(final long tgUserId, final long tgChatId) {
         final User user = userRepository.getUserByTgUserId(tgUserId);
         return user != null;
     }
 
     @Override
     public String hasUnacceptableAnswers(long tgUserId) {
-        final List<UserRegistrationAnswer> allByTgUserId = answerRepository.findAllByTgUserId(userRepository.getUserByTgUserId(tgUserId));
+        final List<UserRegistrationAnswer> allByTgUserId = userRegistrationAnswerRep.findAllByTgUserId(userRepository.getUserByTgUserId(tgUserId));
         final Optional<UserRegistrationAnswer> optional = allByTgUserId.stream().filter(q -> q.getQuestion().getQuestionOrder() == 1).findFirst();
 
         if (optional.isPresent()
@@ -158,27 +195,23 @@ public class RegistrationServiceImpl implements IRegistrationService {
         };
     }
 
-    private boolean validAnswerTypeForQuestion(final String text, final String answerType) {
-        final AnswerType type = AnswerType.findByValue(answerType);
-        assert type != null;
-        return switch (type) {
-            case BOOLEAN -> text.trim().equalsIgnoreCase("да") || text.trim().equalsIgnoreCase("нет");
-            case INTEGER -> NumberUtils.isCreatable(text);
+    private boolean validAnswerTypeForQuestion(final String text, final UserRegistrationAnswer answer) {
+        final Command p = Command.findByValue(answer.getQuestion().getQuestionMeaning());
+        if (p == null) return false;
+
+        return switch (p) {
+            case FLOOR -> NumberUtils.isCreatable(text);
+            case SECTION -> NumberUtils.isCreatable(text);
+            case ADDRESS -> text.trim().equalsIgnoreCase("да") || text.trim().equalsIgnoreCase("нет");
+            default -> false;
         };
     }
 
     @Override
     public boolean isUserRegistered(final long tgUserId) {
-        // TODO: есть еще вариант проверки ответов на все вопросы при регистрации. можно совместить
-        final List<UserRegistrationAnswer> allByTgUserId = answerRepository.findAllByTgUserId(userRepository.getUserByTgUserId(tgUserId));
-
-
-        final User user = userRepository.getUserByTgUserId(tgUserId);
-        if (user == null) {
-            return false;
-        }
-
-        return user.getSectionNumber() != 0 && user.getFloorNumber() != 0;
+        final long answeredCount = userRegistrationAnswerRep.countByTgUserId(userRepository.getUserByTgUserId(tgUserId));
+        final long totalQuestionCount = questionRep.count();
+        return answeredCount == totalQuestionCount;
     }
 
     @Override
@@ -200,5 +233,17 @@ public class RegistrationServiceImpl implements IRegistrationService {
     @Override
     public boolean isBotRegistered(final Long chatId) {
         return buildingRepository.existsByTgGroupChatId(chatId);
+    }
+
+    @Override
+    public boolean isFromAddress(final Long tgUserId) {
+        final List<UserRegistrationAnswer> answers = userRegistrationAnswerRep.getByTgUserId(userRepository.getUserByTgUserId(tgUserId));
+        if (answers.isEmpty()) return true; //еще нет данных, но потенциально может быть - да
+
+        final Optional<UserRegistrationAnswer> optional = answers
+                .stream()
+                .filter(a -> a.getQuestion().getQuestionOrder() == 1)
+                .findFirst();
+        return optional.map(answer -> answer.getAnswer().equalsIgnoreCase("да")).orElse(false);
     }
 }
