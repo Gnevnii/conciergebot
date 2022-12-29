@@ -264,6 +264,160 @@ public class UserRegistrationWKeyboardReaction extends AbstractPrivateChatReacti
         return inlineKeyboard;
     }
 
+    @Transactional
+    public void processMessageText(final String text,
+                                   final Long chatId,
+                                   final Long tgUserId,
+                                   final BiConsumer<Long, Object> sender) {
+        final User user = userRepository.getUserByTgUserId(tgUserId);
+        final RegistrationQuestion question = registrationService.getNextRegistrationQuestion(user);
+        if (question == null) return;
+
+        final RegQuestionType flatCoordinate = RegQuestionType.findByMeaning(question.getQuestionMeaning());
+        if (flatCoordinate == null) return;
+
+        boolean isSend = switch (flatCoordinate) {
+            case NAME -> {
+                user.setName(text.trim());
+                userRepository.save(user);
+                yield false;
+            }
+            case ADDRESS -> {
+                final boolean isValid = isValidBooleanAnswer(text.trim());
+                if (!isValid) {
+                    sender.accept(chatId, new SendMessage(String.valueOf(chatId), "Некорректный ответ"));
+                    yield true;
+                }
+                yield false;
+            }
+            case FLOOR -> {
+                final boolean isValid = isValidFloor(text.trim());
+                if (!isValid) {
+                    sender.accept(chatId, new SendMessage(String.valueOf(chatId), "Некорректный номер этажа"));
+                    yield true;
+                }
+                yield false;
+            }
+            case SECTION -> {
+                final boolean isValid = isValidSection(text.trim());
+                if (!isValid) {
+                    sender.accept(chatId, new SendMessage(String.valueOf(chatId), "Некорректный номер плана"));
+                    yield true;
+                }
+                yield false;
+            }
+            case FLAT -> {
+                final boolean isValid = isValidFlatLimit(text.trim());
+                if (!isValid) {
+                    sender.accept(chatId, new SendMessage(String.valueOf(chatId), "Некорректный номер квартиры"));
+                    yield true;
+                }
+
+                calculateAndSaveFloorSection(user, text.trim());
+                yield false;
+            }
+        };
+
+        if (!isSend) {
+            saveAnswer(text, user, question);
+        }
+    }
+
+    @Transactional
+    public void calculateAndSaveFloorSection(final User user, final String flat) {
+        final SectionFloor sectionFloor = flatHelper.calculateSectionFloor(Integer.parseInt(flat));
+        user.setSectionNumber(sectionFloor.section());
+        user.setFloorNumber(sectionFloor.floor());
+        user.setFlatNumber(Integer.parseInt(flat));
+        userRepository.save(user);
+    }
+
+    private boolean isValidBooleanAnswer(final String text) {
+        return text.equalsIgnoreCase("да") || text.equalsIgnoreCase("нет");
+    }
+
+    @Transactional
+    public void saveAnswer(final String text, final User user, final RegistrationQuestion question) {
+        final UserRegistrationAnswer answer = new UserRegistrationAnswer();
+        answer.setTgUserId(user);
+        answer.setQuestion(question);
+        answer.setAnswer(text.trim());
+        userRegistrationAnswerRepository.save(answer);
+    }
+
+    private boolean isMatchUserFloorSection(final String text, long tgUserId) {
+        final boolean creatable = NumberUtils.isCreatable(text);
+        if (!creatable) return false;
+
+        int flat = NumberUtils.createInteger(text);
+        final User user = userRepository.getUserByTgUserId(tgUserId);
+        final SectionFloor sectionFloor = flatHelper.calculateSectionFloor(flat);
+        return sectionFloor.floor() == user.getFloorNumber() && sectionFloor.section() == user.getSectionNumber();
+    }
+
+    private boolean isValidSection(final String text) {
+        final boolean isCreatable = NumberUtils.isCreatable(text);
+        if (!isCreatable) return false;
+
+        return Integer.parseInt(text) >= 1 && Integer.parseInt(text) <= 8;
+    }
+
+    private boolean isValidFloor(final String text) {
+        final boolean isCreatable = NumberUtils.isCreatable(text);
+        if (!isCreatable) return false;
+
+        return Integer.parseInt(text) >= 2 && Integer.parseInt(text) <= 25;
+    }
+
+    private boolean isValidFlatLimit(final String text) {
+        final boolean isCreatable = NumberUtils.isCreatable(text);
+        if (!isCreatable) return false;
+
+        return Integer.parseInt(text) >= 1 && Integer.parseInt(text) <= 192;
+    }
+
+    private void sendNextQuestion(long chatId, long tgUserid, final BiConsumer<Long, Object> sender) {
+        final QuestionKeyboardConfig question = registrationService.getNextRegistrationQuestionConfig(tgUserid);
+        if (question == null) {
+            sender.accept(chatId, new SendMessage(String.valueOf(chatId), "Вы ответили на все необходимые вопросы! Вам доступны функции бота"));
+            return;
+        }
+
+        final SendMessage sendMessage = new SendMessage(String.valueOf(chatId), question.getQuestion());
+        if (question.getButtonConfigs().isEmpty()) {
+            //нет вариантов ответа, т.е. открытый вопрос - пользователь должен ввести строковый ответ
+            sender.accept(chatId, sendMessage);
+            return;
+        }
+
+        sendMessage.setReplyMarkup(buildKeyboard(question));
+        sender.accept(chatId, sendMessage);
+    }
+
+    @NotNull
+    private InlineKeyboardMarkup buildKeyboard(final QuestionKeyboardConfig question) {
+        final List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        final InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(rows);
+
+        final List<AnswerButtonConfig> buttonConfigs = question.getButtonConfigs();
+        for (int i = 0; i < buttonConfigs.size(); i++) {
+            if (i % 5 == 0) {
+                //не будем выдавать больше 5 кнопок в ряд
+                rows.add(row);
+                row = new ArrayList<>();
+            }
+            final AnswerButtonConfig buttonConfig = buttonConfigs.get(i);
+            final InlineKeyboardButton button = new InlineKeyboardButton(buttonConfig.getLabel());
+            button.setCallbackData(buttonConfig.getCallbackData());
+            row.add(button);
+        }
+
+        if (!row.isEmpty()) rows.add(row);
+        if (!rows.isEmpty()) inlineKeyboard.setKeyboard(rows);
+        return inlineKeyboard;
+    }
+
     @Override
     public Command getCommand() {
         return Command.REACTION;
