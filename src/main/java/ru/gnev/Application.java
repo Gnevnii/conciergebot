@@ -1,4 +1,4 @@
-package ru.gnev.conciergebot;
+package ru.gnev;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -1,4 +1,4 @@
-package ru.gnev.conciergebot.bean.entity;
+package ru.gnev.whereiscardsbot.bean;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -10,27 +10,26 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.util.Date;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "cb_error", schema = "concierge_db")
-public class Error {
+@Table(name = "wcb_user", schema = "whereiscard_db")
+public class User {
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "l_id", nullable = false)
-    private Long id;
-    @Column(name = "l_tg_groupchat_id")
-    private long tgGroupChatId;
+    @Column(name = "l_guid", nullable = false)
+    private long id;
     @Column(name = "l_tg_user_id")
     private long tgUserId;
-    @Column(name = "dt_error_date")
-    private Date errorDateTime;
-    @Column(name = "s_text", length = 2048)
-    private String messageText;
-    @Column(name = "s_error_text", length = 2048)
-    private String errorText;
+    @Column(name = "s_tg_user_name")
+    private String tgUserName;
+    @Column(name = "s_user_login")
+    private String userLogin;
+    @Column(name = "s_user_last_name")
+    private String userLastName;
+    @Column(name = "b_deleted")
+    private boolean isDeleted;
 }
