@@ -20,7 +20,7 @@ import ru.gnev.conciergebot.persist.repository.UserRegistrationAnswerRepository;
 import ru.gnev.conciergebot.persist.repository.UserRepository;
 import ru.gnev.conciergebot.utils.CallbackQueryDataHelper;
 
-import jakarta.inject.Inject;
+import javax.inject.Inject;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;

@@ -30,6 +30,7 @@ import java.io.StringWriter;
 import java.util.Date;
 import java.util.Optional;
 
+@Component
 public class ConciergeBot extends TimedSendLongPollingBot {
     private static final Logger LOGGER = LogManager.getLogger(ConciergeBot.class);
 

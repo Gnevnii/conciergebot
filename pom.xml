@@ -6,16 +6,16 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.2</version>
+        <version>2.7.0</version>
     </parent>
 
     <groupId>ru.gnev</groupId>
-    <artifactId>whereiscardsbot</artifactId>
+    <artifactId>conciergebot</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>whereiscardsbot</name>
-    <description>Бот по мониторингу карт</description>
+    <name>conciergebot</name>
+    <description>Бот взаимодействия соседей по дому</description>
 
     <distributionManagement>
         <repository>
@@ -31,8 +31,8 @@
     </distributionManagement>
 
     <properties>
-        <java.version>21</java.version>
-        <lombok.version>1.18.30</lombok.version>
+        <java.version>17</java.version>
+        <lombok.version>1.18.24</lombok.version>
         <telegram.bot.starter.version>6.3.0</telegram.bot.starter.version>
     </properties>
 
@@ -86,14 +86,6 @@
     </dependencies>
 
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M5</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
